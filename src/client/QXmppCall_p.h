@@ -26,6 +26,8 @@
 
 #include <QList>
 
+#include <gst/gst.h>
+
 #include "QXmppJingleIq.h"
 #include "QXmppCall.h"
 
@@ -66,8 +68,9 @@ public:
     ~QXmppCallPrivate();
 
     void ssrcActive(uint sessionId, uint ssrc);
-    void padAdded(const QGst::PadPtr &pad);
-    QGst::CapsPtr ptMap(uint sessionId, uint pt);
+    void padAdded(GstPad *pad);
+    GstCaps * ptMap(uint sessionId, uint pt);
+    bool isFormatSupported(const QString &codecName) const;
     void filterGStreamerFormats(QList<GstCodec> &formats);
 
     QXmppCallStream *createStream(const QString &media, const QString &creator, const QString &name);
@@ -94,8 +97,8 @@ public:
     QString sid;
     QXmppCall::State state;
 
-    QGst::PipelinePtr pipeline;
-    QGst::ElementPtr rtpbin;
+    GstElement *pipeline;
+    GstElement *rtpbin;
 
     // Media streams
     QList<QXmppCallStream*> streams;
@@ -103,8 +106,8 @@ public:
 
     // Supported codecs
     QList<GstCodec> videoCodecs = {
-        {.pt = 101, .name = "H265", .channels = 1, .clockrate = 90000, .gstPay = "rtph265pay", .gstDepay = "rtph265depay", .gstEnc = "x265enc", .gstDec = "avdec_h265", .encProps = {{"tune", 4}, {"speed-preset", 1}, {"bitrate", 256}}},
-        // vp9enc seems to be very slow. Don't offer it for now.
+        // vp9enc and x265enc seems to be very slow. Don't offer it for now.
+        //{.pt = 101, .name = "H265", .channels = 1, .clockrate = 90000, .gstPay = "rtph265pay", .gstDepay = "rtph265depay", .gstEnc = "x265enc", .gstDec = "avdec_h265", .encProps = {{"tune", 4}, {"speed-preset", 1}, {"bitrate", 256}}},
         //{.pt = 100, .name = "VP9", .channels = 1, .clockrate = 90000, .gstPay = "rtpvp9pay", .gstDepay = "rtpvp9depay", .gstEnc = "vp9enc", .gstDec = "vp9dec", .encProps = {{"deadline", 20000}, {"target-bitrate", 256000}}},
         {.pt = 99, .name = "H264", .channels = 1, .clockrate = 90000, .gstPay = "rtph264pay", .gstDepay = "rtph264depay", .gstEnc = "x264enc", .gstDec = "avdec_h264", .encProps = {{"tune", 4}, {"speed-preset", 1}, {"bitrate", 256}}},
         {.pt = 98, .name = "VP8", .channels = 1, .clockrate = 90000, .gstPay = "rtpvp8pay", .gstDepay = "rtpvp8depay", .gstEnc = "vp8enc", .gstDec = "vp8dec", .encProps = {{"deadline", 20000}, {"target-bitrate", 256000}}}

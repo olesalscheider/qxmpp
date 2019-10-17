@@ -45,7 +45,7 @@ add_simple_test(qxmppstunmessage)
 add_simple_test(qxmppvcardiq)
 add_simple_test(qxmppversioniq)
 
-if(HAVE_GSTREAMER)
+if(WITH_GSTREAMER)
     add_simple_test(qxmppcallmanager)
 endif()
 

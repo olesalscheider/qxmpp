@@ -24,10 +24,7 @@
 #include <QDomElement>
 #include <QTimer>
 
-#include <QGlib/Connect>
-#include <QGst/ElementFactory>
-#include <QGst/Pipeline>
-#include <QGst/Structure>
+#include <gst/gst.h>
 
 #include "QXmppCall.h"
 #include "QXmppCall_p.h"
@@ -41,10 +38,6 @@
 #include "QXmppStun.h"
 #include "QXmppUtils.h"
 
-#undef emit
-#include <QGlib/Connect>
-#include <QGlib/Signal>
-
 QXmppCallPrivate::QXmppCallPrivate(QXmppCall *qq)
     : direction(QXmppCall::IncomingDirection),
     manager(0),
@@ -57,41 +50,52 @@ QXmppCallPrivate::QXmppCallPrivate(QXmppCall *qq)
     filterGStreamerFormats(videoCodecs);
     filterGStreamerFormats(audioCodecs);
 
-    pipeline = QGst::Pipeline::create();
-    rtpbin = QGst::ElementFactory::make("rtpbin");
+    pipeline = gst_pipeline_new(nullptr);
+    if (!pipeline) {
+        qFatal("Failed to create pipeline");
+        return;
+    }
+    rtpbin = gst_element_factory_make("rtpbin", nullptr);
     if (!rtpbin) {
         qFatal("Failed to create rtpbin");
         return;
     }
     // We do not want to build up latency over time
-    rtpbin->setProperty("drop-on-latency", true);
-    pipeline->add(rtpbin);
-    QGlib::connect(rtpbin, "pad-added", this, &QXmppCallPrivate::padAdded);
-    QGlib::connect(rtpbin, "request-pt-map", this, &QXmppCallPrivate::ptMap);
-    QGlib::connect(rtpbin, "on-ssrc-active", this, &QXmppCallPrivate::ssrcActive);
-    pipeline->setState(QGst::StatePlaying);
+    g_object_set(rtpbin, "drop-on-latency", true, nullptr);
+    if (!gst_bin_add(GST_BIN(pipeline), rtpbin)) {
+        qFatal("Could not add rtpbin to the pipeline");
+    }
+    g_signal_connect_swapped(rtpbin, "pad-added", G_CALLBACK(&QXmppCallPrivate::padAdded), this);
+    g_signal_connect_swapped(rtpbin, "request-pt-map", G_CALLBACK(&QXmppCallPrivate::ptMap), this);
+    g_signal_connect_swapped(rtpbin, "on-ssrc-active", G_CALLBACK(&QXmppCallPrivate::ssrcActive), this);
+    if (gst_element_set_state(pipeline, GST_STATE_PLAYING) == GST_STATE_CHANGE_FAILURE) {
+        qFatal("Unable to set the pipeline to the playing state");
+        return;
+    }
 }
 
 QXmppCallPrivate::~QXmppCallPrivate()
 {
-    pipeline->setState(QGst::StateNull);
+    if (gst_element_set_state(pipeline, GST_STATE_NULL) == GST_STATE_CHANGE_FAILURE) {
+        qFatal("Unable to set the pipeline to the null state");
+    }
     for (auto stream : streams) {
         delete stream;
     }
-    pipeline.clear();
+    gst_object_unref(pipeline);
 }
 
 void QXmppCallPrivate::ssrcActive(uint sessionId, uint ssrc)
 {
     Q_UNUSED(ssrc)
-    auto internalSession = QGlib::emit<QGst::ElementPtr>(rtpbin, "get-session", static_cast<uint>(sessionId));
-    //qWarning(internalSession->property("stats").get<QGst::Structure>().toString().toLatin1().data());
+    GstElement *rtpSession;
+    g_signal_emit_by_name(rtpbin, "get-session", static_cast<uint>(sessionId), &rtpSession);
     // TODO: implement bitrate controller
 }
 
-void QXmppCallPrivate::padAdded(const QGst::PadPtr &pad)
+void QXmppCallPrivate::padAdded(GstPad *pad)
 {
-    auto nameParts = pad->name().split("_");
+    auto nameParts = QString(gst_pad_get_name(pad)).split("_");
     if (nameParts.size() < 4) {
         return;
     }
@@ -131,27 +135,41 @@ void QXmppCallPrivate::padAdded(const QGst::PadPtr &pad)
     }
 }
 
-QGst::CapsPtr QXmppCallPrivate::ptMap(uint sessionId, uint pt)
+GstCaps * QXmppCallPrivate::ptMap(uint sessionId, uint pt)
 {
     auto stream = findStreamById(sessionId);
     for (auto &payloadType : stream->d->payloadTypes) {
         if (payloadType.id() == pt) {
-            return QGst::Caps::fromString(QString("application/x-rtp,media=(string)%1,clock-rate=(int)%2,encoding-name=(string)%3")
-                .arg(stream->media()).arg(payloadType.clockrate()).arg(payloadType.name()).toLatin1().data());
+            return gst_caps_new_simple("application/x-rtp",
+                                       "media", G_TYPE_STRING, stream->media().toLatin1().data(),
+                                       "clock-rate", G_TYPE_INT, payloadType.clockrate(),
+                                       "encoding-name", G_TYPE_STRING, payloadType.name().toLatin1().data(),
+                                       nullptr);
         }
     }
     q->warning(QString("Remote party %1 transmits wrong %2 payload for call %3").arg(jid, stream->media(), sid));
-    return QGst::CapsPtr();
+    return nullptr;
+}
+
+bool QXmppCallPrivate::isFormatSupported(const QString &codecName) const
+{
+    GstElementFactory *factory;
+    factory = gst_element_factory_find(codecName.toLatin1().data());
+    if (!factory) {
+        return false;
+    }
+    g_object_unref(factory);
+    return true;
 }
 
 void QXmppCallPrivate::filterGStreamerFormats(QList<GstCodec> &formats)
 {
     auto it = formats.begin();
     while (it != formats.end()) {
-        bool supported = QGst::ElementFactory::find(it->gstPay) &&
-                         QGst::ElementFactory::find(it->gstDepay) &&
-                         QGst::ElementFactory::find(it->gstEnc) &&
-                         QGst::ElementFactory::find(it->gstDec);
+        bool supported = isFormatSupported(it->gstPay) &&
+                         isFormatSupported(it->gstDepay) &&
+                         isFormatSupported(it->gstEnc) &&
+                         isFormatSupported(it->gstDec);
         if (!supported) {
             it = formats.erase(it);
         } else {
@@ -399,7 +417,7 @@ QXmppCallStream *QXmppCallPrivate::createStream(const QString &media, const QStr
         return nullptr;
     }
 
-    if (!QGst::ElementFactory::find("rtpbin")) {
+    if (!isFormatSupported("rtpbin")) {
         q->warning("The rtpbin GStreamer plugin is missing. Calls are not possible.");
         return nullptr;
     }
@@ -577,7 +595,7 @@ void QXmppCall::accept()
 
 /// Returns the GStreamer pipeline.
 
-QGst::PipelinePtr QXmppCall::pipeline() const
+GstElement * QXmppCall::pipeline() const
 {
     return d->pipeline;
 }

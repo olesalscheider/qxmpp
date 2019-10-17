@@ -28,8 +28,6 @@
 #include <QIODevice>
 #include <QMetaType>
 
-#include <QGst/Pipeline>
-
 #include "QXmppClientExtension.h"
 #include "QXmppLogger.h"
 #include "QXmppCall.h"

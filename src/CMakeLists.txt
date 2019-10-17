@@ -154,9 +154,9 @@ set(SOURCE_FILES
     server/QXmppServerPlugin.cpp
 )
 
-option(WITH_GSTREAMER "Build with GStreamer support for Jingle" OFF)
 if(WITH_GSTREAMER)
-    find_package(Qt5GStreamer REQUIRED)
+    find_package(GStreamer REQUIRED)
+    find_package(GLIB2 REQUIRED)
 
     set(INSTALL_HEADER_FILES
         ${INSTALL_HEADER_FILES}
@@ -194,7 +194,8 @@ target_include_directories(qxmpp
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/server>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/base>
     $<INSTALL_INTERFACE:include/qxmpp>
-    ${QTGSTREAMER_INCLUDES}
+    ${GLIB2_INCLUDE_DIR}
+    ${GSTREAMER_INCLUDE_DIRS}
 )
 
 target_link_libraries(qxmpp
@@ -207,9 +208,8 @@ target_link_libraries(qxmpp
 if(WITH_GSTREAMER)
     target_link_libraries(qxmpp
         PUBLIC
-        Qt5GLib
-        Qt5GStreamer
-        Qt5GStreamerUtils
+        ${GLIB2_LIBRARIES}
+        ${GSTREAMER_LIBRARY}
     )
 endif()
 

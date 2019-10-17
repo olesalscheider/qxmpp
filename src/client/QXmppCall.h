@@ -27,8 +27,6 @@
 #include <QObject>
 #include <QMetaType>
 
-#include <QGst/Pipeline>
-
 #include "QXmppCallStream.h"
 #include "QXmppClientExtension.h"
 #include "QXmppLogger.h"
@@ -75,7 +73,7 @@ public:
     QString sid() const;
     QXmppCall::State state() const;
 
-    QGst::PipelinePtr pipeline() const;
+    GstElement * pipeline() const;
     QXmppCallStream * audioStream() const;
     QXmppCallStream * videoStream() const;
 

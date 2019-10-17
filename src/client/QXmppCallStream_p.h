@@ -28,9 +28,7 @@
 #include <QObject>
 #include <QString>
 
-#include <QGst/GhostPad>
-#include <QGst/Utils/ApplicationSink>
-#include <QGst/Utils/ApplicationSource>
+#include <gst/gst.h>
 
 #include "QXmppCall_p.h"
 #include "QXmppJingleIq.h"
@@ -53,54 +51,42 @@ static const int RTCP_COMPONENT = 2;
 static const QLatin1String AUDIO_MEDIA("audio");
 static const QLatin1String VIDEO_MEDIA("video");
 
-class IceApplicationSink : public QGst::Utils::ApplicationSink
-{
-public:
-    IceApplicationSink(QXmppIceConnection *connection_, int component_);
-protected:
-    virtual void eos() override;
-    virtual QGst::FlowReturn newSample() override;
-private:
-    QXmppIceConnection *connection;
-    int component;
-};
-
 class QXmppCallStreamPrivate : public QObject {
 Q_OBJECT
 public:
-    QXmppCallStreamPrivate(QXmppCallStream *parent, QGst::PipelinePtr pipeline_, QGst::ElementPtr rtpbin_,
+    QXmppCallStreamPrivate(QXmppCallStream *parent, GstElement *pipeline_, GstElement *rtpbin_,
                            QString media_, QString creator_, QString name_, int id_);
     ~QXmppCallStreamPrivate();
 
-    void datagramReceived(const QByteArray &datagram, QGst::Utils::ApplicationSource &appsrc);
+    GstFlowReturn sendDatagram(GstElement *appsink, int component);
+    void datagramReceived(const QByteArray &datagram, GstElement *appsrc);
 
     void addEncoder(QXmppCallPrivate::GstCodec &codec);
-    void addDecoder(QGst::PadPtr pad, QXmppCallPrivate::GstCodec &codec);
-    void addRtpSender(QGst::PadPtr pad);
-    void addRtcpSender(QGst::PadPtr pad);
+    void addDecoder(GstPad *pad, QXmppCallPrivate::GstCodec &codec);
+    void addRtpSender(GstPad *pad);
+    void addRtcpSender(GstPad *pad);
 
     QXmppCallStream *q;
 
     quint32 localSsrc;
 
-    QGst::Utils::ApplicationSource apprtpsrc;
-    QGst::Utils::ApplicationSource apprtcpsrc;
-    IceApplicationSink *apprtpsink;
-    IceApplicationSink *apprtcpsink;
-
-    QGst::PipelinePtr pipeline;
-    QGst::ElementPtr rtpbin;
-    QGst::GhostPadPtr receivePad;
-    QGst::GhostPadPtr internalReceivePad;
-    QGst::GhostPadPtr sendPad;
-    QGst::GhostPadPtr internalRtpPad;
-    QGst::GhostPadPtr internalRtcpPad;
-    QGst::BinPtr encoderWrapperBin;
-    QGst::BinPtr decoderWrapperBin;
-    QGst::BinPtr encoderBin;
-    QGst::BinPtr decoderBin;
-    QGst::BinPtr iceReceiveBin;
-    QGst::BinPtr iceSendBin;
+    GstElement *pipeline;
+    GstElement *rtpbin;
+    GstPad *receivePad;
+    GstPad *internalReceivePad;
+    GstPad *sendPad;
+    GstPad *internalRtpPad;
+    GstPad *internalRtcpPad;
+    GstElement *encoderWrapperBin;
+    GstElement *decoderWrapperBin;
+    GstElement *encoderBin;
+    GstElement *decoderBin;
+    GstElement *iceReceiveBin;
+    GstElement *iceSendBin;
+    GstElement *apprtpsrc;
+    GstElement *apprtcpsrc;
+    GstElement *apprtpsink;
+    GstElement *apprtcpsink;
 
     QXmppIceConnection *connection;
     QString media;

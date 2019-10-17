@@ -9,6 +9,8 @@ set(SO_VERSION 2)
 set(VERSION_STRING ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 mark_as_advanced(VERSION_MAJOR VERSION_MINOR VERSION_PATCH VERSION_STRING)
 
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
+
 set(CMAKE_CXX_STANDARD 11)
 
 find_package(Qt5 REQUIRED COMPONENTS Core Network Xml)
@@ -21,6 +23,8 @@ option(BUILD_TESTS "Build tests." ON)
 option(BUILD_INTERNAL_TESTS "Build internal tests." OFF)
 option(BUILD_DOCUMENTATION "Build API documentation." OFF)
 option(BUILD_EXAMPLES "Build examples." ON)
+
+option(WITH_GSTREAMER "Build with GStreamer support for Jingle" OFF)
 
 add_subdirectory(src)
 

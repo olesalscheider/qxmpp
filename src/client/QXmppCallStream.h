@@ -26,9 +26,7 @@
 
 #include <QObject>
 
-#include <QGst/Element>
-#include <QGst/Pad>
-#include <QGst/Pipeline>
+#include <gst/gst.h>
 
 #include <QXmppGlobal.h>
 
@@ -47,13 +45,13 @@ public:
 
 signals:
     /// \brief This signal is emitted when the QtGStreamer receiving pad is available
-    void receivePadAdded(QGst::PadPtr pad);
+    void receivePadAdded(GstPad *pad);
 
     /// \brief This signal is emitted when the QtGStreamer sending pad is available
-    void sendPadAdded(QGst::PadPtr pad);
+    void sendPadAdded(GstPad *pad);
 
 private:
-    QXmppCallStream(QGst::PipelinePtr pipeline, QGst::ElementPtr rtpbin,
+    QXmppCallStream(GstElement *pipeline, GstElement *rtpbin,
                     QString media, QString creator, QString name, int id);
 
     QXmppCallStreamPrivate *d;

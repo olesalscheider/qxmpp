@@ -24,7 +24,7 @@
 #include <QDomElement>
 #include <QTimer>
 
-#include <QGst/Init>
+#include <gst/gst.h>
 
 #include "QXmppCallManager.h"
 #include "QXmppCallManager_p.h"
@@ -43,7 +43,7 @@ QXmppCallManagerPrivate::QXmppCallManagerPrivate(QXmppCallManager *qq)
     q(qq)
 {
     // Initialize GStreamer
-    QGst::init();
+    gst_init(nullptr, nullptr);
 }
 
 QXmppCall *QXmppCallManagerPrivate::findCall(const QString &sid) const
