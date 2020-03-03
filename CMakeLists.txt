@@ -11,7 +11,7 @@ mark_as_advanced(VERSION_MAJOR VERSION_MINOR VERSION_PATCH VERSION_STRING)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/modules")
 
-find_package(Qt5 5.7.0 REQUIRED COMPONENTS Core Network Xml)
+find_package(Qt5 5.7.0 REQUIRED COMPONENTS Core Network Xml Gui Widgets)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
@@ -67,4 +67,8 @@ install(
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
     COMPONENT Devel
 )
+
+add_executable(voip_test voiptest/main.cpp)
+target_link_libraries(voip_test qxmpp Qt5::Core Qt5::Gui Qt5::Widgets)
+
 

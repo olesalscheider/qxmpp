@@ -12,6 +12,10 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/server)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/base/QXmppGlobal.h.in ${CMAKE_CURRENT_BINARY_DIR}/base/QXmppGlobal.h @ONLY)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/base)
 
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
 set(INSTALL_HEADER_FILES
     ${CMAKE_CURRENT_BINARY_DIR}/base/QXmppGlobal.h
 
